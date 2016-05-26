@@ -15,6 +15,8 @@ from psychopy import visual, core, parallel, event, monitors
 import random
 import numpy as np
 import pygaze
+import os
+from os.path import join
 
 # Stimulus and Experiment Parameters
 contrasts = [0.08, 0.16, 0.32, 0.64, 1.0]  # the various contrasts to use
@@ -26,7 +28,7 @@ tempfreq = 3.0  # the temporal frequency of the flicker (Hz)
 repetitions = 6  # how many trials you want per condition (integer)
 screenfreq = 60.0  # how fast the screen is (usually 60, 85, 120 or 144 Hz)
 
-debugging = True  # if you want a smaller window to still see code
+debugging = False  # if you want a smaller window to still see code
 
 
 # Define a trigger function (for calling later)
@@ -45,7 +47,10 @@ def instruct(displaystring):
 # Define a break function (for calling later)
 def trialBreak():
     # Choose a break image here:
-    breakimage = visual.ImageStim(win, image='kings logo.png', units='norm')
+    images = os.listdir('breakimages')
+    breakimage = visual.ImageStim(win, units='norm',
+                                  image=join(os.getcwd(), 'breakimages',
+                                             random.choice(images)))
     breaktext = visual.TextStim(win, alignVert='top', units='norm',
                                 pos=[0, 1], text='')
     for breaktime in range(0, int(breakdur)):
