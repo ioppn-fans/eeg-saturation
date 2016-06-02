@@ -56,7 +56,7 @@ def trialBreak():
     for breaktime in range(0, int(breakdur)):
         # Set message:
         breaktext.text = (
-            'Break for ' + str(breakdur - breaktime) + ' seconds.')
+            "Break for " + str(breakdur - breaktime) + " seconds.")
         # draw, flip, then wait:
         breakimage.draw()
         breaktext.draw()
@@ -154,7 +154,7 @@ for trial in range(1, ntrial):
         if 'escape' in keys:
             # if escape, quit experiment
             win.flip()
-            raise KeyboardInterrupt('You interrupted the script manually!')
+            raise KeyboardInterrupt("You interrupted the script manually!")
         elif 'return' in keys:
             # if return, skip trial (for debug)
             win.flip()
