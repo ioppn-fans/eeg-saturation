@@ -116,7 +116,10 @@ instruct("In this experiment we want to measure your brain's response to "
          "by pressing the space bar. You can do so each time a cross "
          "appears on the screen. Please try and keep your eyes focused on "
          "the cross.\n\n"
-         "Press [space] to begin the experiment.")
+         "Press [space] to continue.")
+instruct("If you have any questions, please ask the experimenter now. If not, "
+         "please check if the experimenter is ready, and then press [space] "
+         "to start the experiment.")
 
 # Step through trials
 for trial in range(1, ntrial):
