@@ -24,7 +24,7 @@ trialdur = 20.0  # the duration of each trial (secs)
 breakdur = 5.0  # how long breaks should be (secs)
 stimsize = 10.0  # how large the stimuli are (visual deg)
 spatfreq = 2.0  # the spatial frequency of the gratings (cyc/deg)
-tempfreq = 3.0  # the temporal frequency of the flicker (Hz)
+tempfreq = 5.0  # the temporal frequency of the flicker (Hz)
 repetitions = 6  # how many trials you want per condition (integer)
 screenfreq = 60.0  # how fast the screen is (usually 60, 85, 120 or 144 Hz)
 
@@ -77,13 +77,12 @@ def trialBreak():
 
 
 # Calculate the necessary numbers from user input
-tempframes = screenfreq / tempfreq
-trialframes = int(np.ceil(trialdur * screenfreq))
-ntrial = len(contrasts) * repetitions
+tempframes = screenfreq / tempfreq  # how many frames per cycle
+trialframes = int(np.ceil(trialdur * screenfreq))  # how many frames per trial
+ntrial = len(contrasts) * repetitions  # how many trials
 
 # Set trial order randomization:
-trialcontrasts = np.random.permutation(
-    np.repeat(contrasts, repetitions))
+trialcontrasts = np.random.permutation(np.repeat(contrasts, repetitions))
 
 # Set the screen parameters: (This is important!)
 screen = monitors.Monitor('testMonitor')
