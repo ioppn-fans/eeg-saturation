@@ -33,7 +33,9 @@ debugging = False  # if you want a smaller window to still see code
 
 # Define a trigger function (for calling later)
 def trigger(value):
-    print(value)
+    outport.setData(triggvalues[triggevent])  # set pins high
+    core.wait(0.003)  # wait so eeg picks it up
+    outport.setData(0)  # set pins low again
 
 
 # Define an instruction function
@@ -106,6 +108,10 @@ fixation = visual.GratingStim(win, tex='sqr', mask='cross', sf=0, size=0.3,
 message = visual.TextStim(win, units='norm', pos=[0, 0], height=0.07,
                           alignVert='center', alignHoriz='center',
                           text='')
+
+# Open a parallel port
+outport = parallel.ParallelPort()
+outport.setData(0)
 
 instruct("In this experiment we want to measure your brain's response to "
          "visual stimulation. You will see lines on the screen that flicker. "
