@@ -16,7 +16,7 @@ import random
 import numpy as np
 import pygaze
 import os
-from os.path import join
+from tobii import tobiicontroller
 
 # Stimulus and Experiment Parameters
 contrasts = [0.08, 0.16, 0.32, 0.64, 1.0]  # the various contrasts to use
@@ -78,7 +78,63 @@ def trialBreak():
     breakimage = breaktext = None
 
 
-# Calculate the necessary numbers from user input
+# Define a trial function
+def trial(contrast):
+    # Update the grating contrast
+    grating.contrast = contrast
+    # display the fixation cross and wait for start:
+    fixation.draw()
+    instruct("Please focus your eyes on the cross, and begin "
+             "the next trial by pressing [space].")
+
+    # Also wait for fixation:
+    # nb this auto-waits at least 500ms
+    fixation.draw()
+    win.flip()
+    tracker.waitForFixation(fixationPoint=fixation.pos)
+
+    # delay trial start by another 500ms + some jitter
+    core.wait(0.5 + 0.5 * np.random.rand())
+
+    # Present stimuli:
+    for iflip in range(1, trialframes):
+        # Set opacity according to sinusoidal flicker:
+        grating.opacity = np.cos(
+            np.pi * (1 + 2 * (iflip % tempframes) / tempframes)
+        ) / 2 + 0.5
+
+        # set grating orientation new on each flip:
+        if iflip % tempframes == 0:
+            grating.ori = random.randrange(0, 180, 5)
+
+        # Draw the stimulus, then flip:
+        grating.draw()
+        win.flip()
+        # If this is the first flip then trigger
+        if iflip == 1:
+            trigger(int(100 * trialcontrasts[trial]))
+
+        # check for keys, if pressed interrupt
+        keys = event.getKeys(keyList=['escape', 'return'])
+        if 'escape' in keys:
+            # if escape, quit experiment
+            win.flip()
+            raise KeyboardInterrupt("You interrupted the script manually!")
+        elif 'return' in keys:
+            # if return, skip trial (for debug)
+            win.flip()
+            break
+
+
+# Get info from gui
+session = {'subject': 'test',
+           'time': datetime.now().strftime('%Y-%m-%d %H-%M')}
+dialog = gui.DlgFromDict(dictionary=session,
+                         title='Pupil Dilation')
+# check the dialog box was OK
+assert dialog.OK, "You cancelled the experiment during the dialog box."
+
+# Calculate the necessary parameters from user input
 tempframes = screenfreq / tempfreq  # how many frames per cycle
 trialframes = int(np.ceil(trialdur * screenfreq))  # how many frames per trial
 ntrial = len(contrasts) * repetitions  # how many trials
@@ -105,9 +161,17 @@ fixation = visual.GratingStim(win, tex='sqr', mask='cross', sf=0, size=0.3,
                               pos=[0, 0], color='black', autoDraw=False)
 
 # Make a dummy message
-message = visual.TextStim(win, units='norm', pos=[0, 0], height=0.07,
+message = visual.TextStim(win, units='norm', pos=[0, -0.5], height=0.07,
                           alignVert='center', alignHoriz='center',
                           text='')
+
+# Open the tobii eyetracker
+tracker = tobiicontroller.TobiiController(win)
+
+# Set a directory for eyetracking data
+eyetrackingdir = os.path.join(os.getcwd(), 'data',
+                              session['time'] + ' ' + session['subject'])
+os.makedirs(eyetrackingdir)
 
 # Open a parallel port
 outport = parallel.ParallelPort()
@@ -127,45 +191,11 @@ instruct("If you have any questions, please ask the experimenter now. If not, "
          "to start the experiment.")
 
 # Step through trials
-for trial in range(1, ntrial):
-    # Set grating contrast
-    grating.contrast = trialcontrasts[trial]
-
-    # Display the fixation cross and wait for start:
-    fixation.draw()
-    message.pos = [0, -0.5]
-    instruct("Please focus your eyes on the cross, and begin "
-             "the next trial by pressing [space].")
-
-    # Delay trial start by another second:
-    fixation.draw()
-    win.flip()
-    core.wait(1)
-
-    # Send trigger on flip
-    win.callOnFlip(trigger, int(100 * trialcontrasts[trial]))
-
-    # Present stimuli:
-    for iflip in range(1, trialframes):
-        # Set opacity according to sinusoidal flicker:
-        grating.opacity = np.cos(
-            np.pi * (1 + 2 * (iflip % tempframes) / tempframes)
-        ) / 2 + 0.5
-        # set grating orientation new on each flip:
-        if iflip % tempframes == 0:
-            grating.ori = random.randrange(0, 180, 5)
-        # Draw the stimulus, then flip:
-        grating.draw()
-        win.flip()
-        # Check for keys, if pressed interrupt
-        keys = event.getKeys(keyList=['escape', 'return'])
-        if 'escape' in keys:
-            # if escape, quit experiment
-            win.flip()
-            raise KeyboardInterrupt("You interrupted the script manually!")
-        elif 'return' in keys:
-            # if return, skip trial (for debug)
-            win.flip()
-            break
+for trialnumber in range(ntrial):
+    # Set the data file for eye tracking
+    tracker.setDataFile(os.path.join(eyetrackingdir,
+                                     'trial %03d.csv' % trialnumber))
+    # Run trial
+    trial(trialcontrasts[trialnumber])
     # Call break function
     trialBreak()
