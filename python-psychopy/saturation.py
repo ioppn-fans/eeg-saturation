@@ -19,8 +19,8 @@ import os
 from tobii import tobiicontroller
 
 # Stimulus and Experiment Parameters
-contrasts = [0.08, 0.16, 0.32, 0.64, 1.0]  # the various contrasts to use
-trialdur = 20.0  # the duration of each trial (secs)
+contrasts = [0.16, 0.32, 0.64, 1.0]  # the various contrasts to use
+trialdur = 10.0  # the duration of each trial (secs)
 breakdur = 5.0  # how long breaks should be (secs)
 stimsize = 10.0  # how large the stimuli are (visual deg)
 spatfreq = 2.0  # the spatial frequency of the gratings (cyc/deg)
@@ -143,10 +143,10 @@ ntrial = len(contrasts) * repetitions  # how many trials
 trialcontrasts = np.random.permutation(np.repeat(contrasts, repetitions))
 
 # Set the screen parameters: (This is important!)
-screen = monitors.Monitor('testMonitor')
-screen.setSizePix([1680, 1050])
-screen.setWidth(47.475)
-screen.setDistance(57)
+screen = monitors.Monitor('tobiix300')
+screen.setSizePix([1920, 1080])  # screen resolution
+screen.setWidth(51)  # screen width in cm
+screen.setDistance(60)  # distance from screen in cm
 
 # Open the display window:
 win = visual.Window([500, 500], allowGUI=False, monitor=screen,
