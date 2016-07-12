@@ -11,11 +11,13 @@
 # contrast response at high contrasts, which is dependent on GABA.
 
 
-from psychopy import visual, core, parallel, event, monitors
+from psychopy import visual, core, parallel, event, monitors, gui
+from datetime import datetime
 import random
 import numpy as np
 import pygaze
 import os
+from os.path import join
 from tobii import tobiicontroller
 
 # Stimulus and Experiment Parameters
@@ -27,14 +29,16 @@ spatfreq = 2.0  # the spatial frequency of the gratings (cyc/deg)
 tempfreq = 5.0  # the temporal frequency of the flicker (Hz)
 repetitions = 6  # how many trials you want per condition (integer)
 screenfreq = 60.0  # how fast the screen is (usually 60, 85, 120 or 144 Hz)
+tobiiid = 'TX300-010103441611'
 
 debugging = False  # if you want a smaller window to still see code
 
 
 # Define a trigger function (for calling later)
 def trigger(value):
-    outport.setData(triggvalues[triggevent])  # set pins high
-    core.wait(0.003)  # wait so eeg picks it up
+    outport.setData(value)  # set pins high
+    tracker.recordEvent('contrast %.2f trialstart' % float(value / 100))
+    core.wait(0.002)  # wait so eeg picks it up
     outport.setData(0)  # set pins low again
 
 
@@ -51,8 +55,8 @@ def trialBreak():
     # Choose a break image here:
     images = os.listdir('breakimages')
     breakimage = visual.ImageStim(win, units='norm',
-                                  image=join(os.getcwd(), 'breakimages',
-                                             random.choice(images)))
+                                  image=os.path.join(os.getcwd(), 'breakimages',
+                                                     random.choice(images)))
     breaktext = visual.TextStim(win, alignVert='top', units='norm',
                                 pos=[0, 1], text='')
     for breaktime in range(0, int(breakdur)):
@@ -94,6 +98,7 @@ def trial(contrast):
     tracker.waitForFixation(fixationPoint=fixation.pos)
 
     # delay trial start by another 500ms + some jitter
+    tracker.startTracking()
     core.wait(0.5 + 0.5 * np.random.rand())
 
     # Present stimuli:
@@ -112,7 +117,7 @@ def trial(contrast):
         win.flip()
         # If this is the first flip then trigger
         if iflip == 1:
-            trigger(int(100 * trialcontrasts[trial]))
+            trigger(int(100 * contrast))
 
         # check for keys, if pressed interrupt
         keys = event.getKeys(keyList=['escape', 'return'])
@@ -124,6 +129,8 @@ def trial(contrast):
             # if return, skip trial (for debug)
             win.flip()
             break
+    # End eyetracking
+    tracker.stopTracking()
 
 
 # Get info from gui
@@ -161,12 +168,29 @@ fixation = visual.GratingStim(win, tex='sqr', mask='cross', sf=0, size=0.3,
                               pos=[0, 0], color='black', autoDraw=False)
 
 # Make a dummy message
-message = visual.TextStim(win, units='norm', pos=[0, -0.5], height=0.07,
+message = visual.TextStim(win, units='norm', pos=[0, 0.5], height=0.07,
                           alignVert='center', alignHoriz='center',
                           text='')
 
 # Open the tobii eyetracker
 tracker = tobiicontroller.TobiiController(win)
+tracker.waitForFindEyeTracker()
+tracker.activate(tobiiid)
+
+# Calibrate the Screen
+tracker.findEyes()
+instruct("In this experiment, we're tracking your eyes. The first thing we "
+         "will do is calibrate the eye tracker. Please follow the dot on "
+         "the screen. Press [space] whenever you are ready.")
+calibrated = False
+while not calibrated:
+    outcome = tracker.doCalibration()
+    if outcome is 'retry':
+        pass
+    elif outcome is 'abort':
+        raise KeyboardInterrupt("You interrupted the script.")
+    elif outcome is 'accept':
+        calibrated = True
 
 # Set a directory for eyetracking data
 eyetrackingdir = os.path.join(os.getcwd(), 'data',
@@ -198,4 +222,9 @@ for trialnumber in range(ntrial):
     # Run trial
     trial(trialcontrasts[trialnumber])
     # Call break function
-    trialBreak()
+    if trialnumber < (ntrial - 1):
+        trialBreak()
+
+# Clean up:
+tracker.destroy()
+win.close()
