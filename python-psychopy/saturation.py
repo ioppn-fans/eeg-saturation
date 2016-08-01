@@ -12,13 +12,12 @@
 
 
 from psychopy import visual, core, parallel, event, monitors, gui
-from datetime import datetime
 import random
 import numpy as np
-import pygaze
 import os
-from os.path import join
-from tobii import tobiicontroller
+import os.path
+from tobiicontroller import TobiiController as tobiicontroller
+from datetime import datetime
 
 # Stimulus and Experiment Parameters
 contrasts = [0.16, 0.32, 0.64, 1.0]  # the various contrasts to use
@@ -32,6 +31,72 @@ screenfreq = 60.0  # how fast the screen is (usually 60, 85, 120 or 144 Hz)
 tobiiid = 'TX300-010103441611'
 
 debugging = False  # if you want a smaller window to still see code
+
+# get info from gui
+sessionInfo = {'subject': 'test',
+               'time': datetime.now().strftime('%Y-%m-%d %H-%M')}
+assert gui.DlgFromDict(dictionary=sessionInfo,
+                       title='Pupil Dilation').OK
+
+# Make a folder to store the data
+datadir = os.path.join(os.getcwd(), 'eyedata',
+                       sessionInfo['time'] + ' ' + sessionInfo['subject'],
+                       '')
+os.makedirs(datadir)
+
+# Calculate the necessary parameters from user input
+tempframes = screenfreq / tempfreq  # how many frames per cycle
+trialframes = int(np.ceil(trialdur * screenfreq))  # how many frames per trial
+ntrial = len(contrasts) * repetitions  # how many trials
+
+# Set trial order randomization:
+trialcontrasts = np.random.permutation(np.repeat(contrasts, repetitions))
+
+# Set the screen parameters: (This is important!)
+screen = monitors.Monitor('tobiix300')
+screen.setSizePix([1920, 1080])  # screen resolution
+screen.setWidth(51)  # screen width in cm
+screen.setDistance(60)  # distance from screen in cm
+
+# Open the display window:
+win = visual.Window([500, 500], allowGUI=False, monitor=screen,
+                    units='deg', fullscr=not debugging)
+# Make a grating (to be changed later)
+grating = visual.GratingStim(win, tex='sin', mask='raisedCos',
+                             contrast=1, sf=spatfreq, size=stimsize)
+# Make a fixation cross
+fixation = visual.GratingStim(win, tex='sqr', mask='cross', sf=0, size=0.3,
+                              pos=[0, 0], color='black', autoDraw=False)
+# Make a dummy message
+message = visual.TextStim(win, units='norm', pos=[0, 0.5], height=0.07,
+                          alignVert='center', alignHoriz='center',
+                          text='')
+
+# Open a parallel port
+outport = parallel.ParallelPort()
+outport.setData(0)
+
+# Open Tobii and activate
+tracker = None
+message.text = "Configuring..."
+message.draw()
+win.flip()
+print("Opening eye tracker connection...")
+tracker = tobiicontroller(win)
+tracker.waitForFindEyeTracker()  # this scans the network
+tracker.activate(tobiiid)  # this opens the tobii connection
+print("Confirming eyes are present...")
+tracker.findEyes()  # this mirrors the eyes on the screen
+print("Calibrating....")
+calibrated = False
+while not calibrated:
+    outcome = tracker.doCalibration()
+    if outcome is 'retry':
+        pass
+    elif outcome is 'abort':
+        raise KeyboardInterrupt("You interrupted the script.")
+    elif outcome is 'accept':
+        calibrated = True
 
 
 # Define a trigger function (for calling later)
@@ -84,6 +149,10 @@ def trialBreak():
 
 # Define a trial function
 def trial(contrast):
+    # Set eyetracking directory
+    tracker.setDataFile(os.path.join(datadir,
+                                     'trial %03d.csv' % trialnumber))
+
     # Update the grating contrast
     grating.contrast = contrast
     # display the fixation cross and wait for start:
@@ -133,74 +202,6 @@ def trial(contrast):
     tracker.stopTracking()
 
 
-# Get info from gui
-session = {'subject': 'test',
-           'time': datetime.now().strftime('%Y-%m-%d %H-%M')}
-dialog = gui.DlgFromDict(dictionary=session,
-                         title='Pupil Dilation')
-# check the dialog box was OK
-assert dialog.OK, "You cancelled the experiment during the dialog box."
-
-# Calculate the necessary parameters from user input
-tempframes = screenfreq / tempfreq  # how many frames per cycle
-trialframes = int(np.ceil(trialdur * screenfreq))  # how many frames per trial
-ntrial = len(contrasts) * repetitions  # how many trials
-
-# Set trial order randomization:
-trialcontrasts = np.random.permutation(np.repeat(contrasts, repetitions))
-
-# Set the screen parameters: (This is important!)
-screen = monitors.Monitor('tobiix300')
-screen.setSizePix([1920, 1080])  # screen resolution
-screen.setWidth(51)  # screen width in cm
-screen.setDistance(60)  # distance from screen in cm
-
-# Open the display window:
-win = visual.Window([500, 500], allowGUI=False, monitor=screen,
-                    units='deg', fullscr=not debugging)
-
-# Make a grating (to be changed later)
-grating = visual.GratingStim(win, tex='sin', mask='raisedCos',
-                             contrast=1, sf=spatfreq, size=stimsize)
-
-# Make a fixation cross
-fixation = visual.GratingStim(win, tex='sqr', mask='cross', sf=0, size=0.3,
-                              pos=[0, 0], color='black', autoDraw=False)
-
-# Make a dummy message
-message = visual.TextStim(win, units='norm', pos=[0, 0.5], height=0.07,
-                          alignVert='center', alignHoriz='center',
-                          text='')
-
-# Open the tobii eyetracker
-tracker = tobiicontroller.TobiiController(win)
-tracker.waitForFindEyeTracker()
-tracker.activate(tobiiid)
-
-# Calibrate the Screen
-tracker.findEyes()
-instruct("In this experiment, we're tracking your eyes. The first thing we "
-         "will do is calibrate the eye tracker. Please follow the dot on "
-         "the screen. Press [space] whenever you are ready.")
-calibrated = False
-while not calibrated:
-    outcome = tracker.doCalibration()
-    if outcome is 'retry':
-        pass
-    elif outcome is 'abort':
-        raise KeyboardInterrupt("You interrupted the script.")
-    elif outcome is 'accept':
-        calibrated = True
-
-# Set a directory for eyetracking data
-eyetrackingdir = os.path.join(os.getcwd(), 'data',
-                              session['time'] + ' ' + session['subject'])
-os.makedirs(eyetrackingdir)
-
-# Open a parallel port
-outport = parallel.ParallelPort()
-outport.setData(0)
-
 instruct("In this experiment we want to measure your brain's response to "
          "visual stimulation. You will see lines on the screen that flicker. "
          "Please keep your eyes focused on the center at the screen during "
@@ -215,16 +216,13 @@ instruct("If you have any questions, please ask the experimenter now. If not, "
          "to start the experiment.")
 
 # Step through trials
-for trialnumber in range(ntrial):
-    # Set the data file for eye tracking
-    tracker.setDataFile(os.path.join(eyetrackingdir,
-                                     'trial %03d.csv' % trialnumber))
-    # Run trial
-    trial(trialcontrasts[trialnumber])
-    # Call break function
-    if trialnumber < (ntrial - 1):
-        trialBreak()
-
-# Clean up:
-tracker.destroy()
-win.close()
+try:
+    for trialnumber in range(ntrial):
+        trial(trialcontrasts[trialnumber])
+        # Call break function
+        if trialnumber < (ntrial - 1):
+            trialBreak()
+finally:
+    # Clean up:
+    tracker.destroy()
+    core.quit()
