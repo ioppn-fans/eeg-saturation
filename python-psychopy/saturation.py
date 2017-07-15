@@ -16,7 +16,7 @@ import random
 import numpy as np
 import os
 import os.path
-from tobiicontroller import TobiiController as tobiicontroller
+# from tobiicontroller import TobiiController as tobiicontroller
 from datetime import datetime
 
 # Stimulus and Experiment Parameters
@@ -28,7 +28,7 @@ spatfreq = 2.0  # the spatial frequency of the gratings (cyc/deg)
 tempfreq = 5.0  # the temporal frequency of the flicker (Hz)
 repetitions = 6  # how many trials you want per condition (integer)
 screenfreq = 60.0  # how fast the screen is (usually 60, 85, 120 or 144 Hz)
-tobiiid = 'TX300-010103441611'
+# tobiiid = 'TX300-010103441611'
 
 debugging = False  # if you want a smaller window to still see code
 
@@ -77,32 +77,32 @@ outport = parallel.ParallelPort()
 outport.setData(0)
 
 # Open Tobii and activate
-tracker = None
-message.text = "Configuring..."
-message.draw()
-win.flip()
-print("Opening eye tracker connection...")
-tracker = tobiicontroller(win)
-tracker.waitForFindEyeTracker()  # this scans the network
-tracker.activate(tobiiid)  # this opens the tobii connection
-print("Confirming eyes are present...")
-tracker.findEyes()  # this mirrors the eyes on the screen
-print("Calibrating....")
-calibrated = False
-while not calibrated:
-    outcome = tracker.doCalibration()
-    if outcome is 'retry':
-        pass
-    elif outcome is 'abort':
-        raise KeyboardInterrupt("You interrupted the script.")
-    elif outcome is 'accept':
-        calibrated = True
+# tracker = None
+# message.text = "Configuring..."
+# message.draw()
+# win.flip()
+# print("Opening eye tracker connection...")
+# tracker = tobiicontroller(win)
+# tracker.waitForFindEyeTracker()  # this scans the network
+# tracker.activate(tobiiid)  # this opens the tobii connection
+# print("Confirming eyes are present...")
+# tracker.findEyes()  # this mirrors the eyes on the screen
+# print("Calibrating....")
+# calibrated = False
+# while not calibrated:
+#     outcome = tracker.doCalibration()
+#     if outcome is 'retry':
+#         pass
+#     elif outcome is 'abort':
+#         raise KeyboardInterrupt("You interrupted the script.")
+#     elif outcome is 'accept':
+#         calibrated = True
 
 
 # Define a trigger function (for calling later)
 def trigger(value):
     outport.setData(value)  # set pins high
-    tracker.recordEvent('contrast %.2f trialstart' % float(value / 100))
+    # tracker.recordEvent('contrast %.2f trialstart' % float(value / 100))
     core.wait(0.002)  # wait so eeg picks it up
     outport.setData(0)  # set pins low again
 
@@ -150,8 +150,8 @@ def trialBreak():
 # Define a trial function
 def trial(contrast):
     # Set eyetracking directory
-    tracker.setDataFile(os.path.join(datadir,
-                                     'trial %03d.csv' % trialnumber))
+    # tracker.setDataFile(os.path.join(datadir,
+    #                                  'trial %03d.csv' % trialnumber))
 
     # Update the grating contrast
     grating.contrast = contrast
@@ -164,10 +164,10 @@ def trial(contrast):
     # nb this auto-waits at least 500ms
     fixation.draw()
     win.flip()
-    tracker.waitForFixation(fixationPoint=fixation.pos)
+    # tracker.waitForFixation(fixationPoint=fixation.pos)
 
     # delay trial start by another 500ms + some jitter
-    tracker.startTracking()
+    # tracker.startTracking()
     core.wait(0.5 + 0.5 * np.random.rand())
 
     # Present stimuli:
@@ -199,7 +199,7 @@ def trial(contrast):
             win.flip()
             break
     # End eyetracking
-    tracker.stopTracking()
+    # tracker.stopTracking()
 
 
 instruct("In this experiment we want to measure your brain's response to "
@@ -224,5 +224,5 @@ try:
             trialBreak()
 finally:
     # Clean up:
-    tracker.destroy()
+    # tracker.destroy()
     core.quit()
